@@ -1,5 +1,5 @@
 import pickle
-from skimage import transform
+#from skimage import transform
 import numpy
 import cv2
 from scipy.ndimage import filters
@@ -374,9 +374,9 @@ if __name__ == '__main__':
         with tf.Session() as sess :
             init = tf.global_variables_initializer()
             sess.run(init)
-            classify, __cost = sess.run([outputs],feed_dict={
+            classify, __cost = sess.run([outputs,cost],feed_dict={
                                    x: test_set_x[index * batch_size: (index + 1) * batch_size],
-                                   y: numpy.zeros(8)})
+                                   y: numpy.zeros((index + 1) * batch_size)})
         sess.close()
         return classify, __cost
     ######################## build done ###########################
