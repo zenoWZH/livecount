@@ -1,4 +1,5 @@
 import pickle
+from skimage import transform
 import numpy
 import cv2
 from scipy.ndimage import filters
@@ -7,6 +8,8 @@ import tensorflow as tf
 import scipy
 #import theano.tensor as T
 from layers_tf import LogisticRegression, HiddenLayer, LeNetConvPoolLayer
+
+global test_set_x, test_set_y, shared_test_set_y
 
 class state:
     NO_REP = 1
@@ -85,7 +88,8 @@ class RepDetector:
 
             ll = si.shape[0]
             th1 = round(ll*0.02)
-            th2 = numpy.floor(ll*0.98)
+            th2 = int(round(numpy.floor(ll*0.98)))
+            print(th2)
             y1 = si[th1]
             y2 = si[th2]
             x1 = sj[th1]
@@ -372,7 +376,7 @@ if __name__ == '__main__':
             sess.run(init)
             classify, __cost = sess.run([outputs],feed_dict={
                                    x: test_set_x[index * batch_size: (index + 1) * batch_size],
-                                   y: test_set_y[index * batch_size: (index + 1) * batch_size]})
+                                   y: numpy.zeros(8)})
         sess.close()
         return classify, __cost
     ######################## build done ###########################
@@ -382,9 +386,9 @@ if __name__ == '__main__':
     for vidNum in range(1,num_of_vids+1):
 
         # input video	
-        cap = cv2.VideoCapture('../data/YTIO/YTIO_'+str(vidNum)+'.avi')	
+        cap = cv2.VideoCapture('../DeepRepICCV2015/data/YTIO/YTIO_'+str(vidNum)+'.avi')	
         # output video	
-        video_writer = cv2.VideoWriter('../out/YTIO_out'+str(vidNum)+'.avi', cv2.VideoWriter_fourcc(*'XVID'), frame_rate, (640, 480))	
+        video_writer = cv2.VideoWriter('../DeepRepICCV2015/out/YTIO_out'+str(vidNum)+'.avi', cv2.VideoWriter_fourcc(*'XVID'), frame_rate, (640, 480))	
 
         global_counter = 0
         winner_stride = 0
@@ -394,6 +398,7 @@ if __name__ == '__main__':
 
         ret, frame = cap.read()
         frame = scipy.misc.imresize(frame, size=(480,640),interp='bilinear')
+        #frame = transform.resize(frame,(480,640))
         proFrame = process_single_frame(frame)
 
         # init detectors    
@@ -410,7 +415,8 @@ if __name__ == '__main__':
                 print ('vid'+str(vidNum)+ ' done') 
                 break
 
-            frame = scipy.misc.imresize(frame, size=(480,640),interp='bilinear')    
+            frame = scipy.misc.imresize(frame, size=(480,640),interp='bilinear')
+            #frame = transform.resize(frame,(480,640))
             proFrame = process_single_frame(frame)
 
             # handle stride A
