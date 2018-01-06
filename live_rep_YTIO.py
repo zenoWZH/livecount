@@ -302,6 +302,9 @@ if __name__ == '__main__':
 
     signals_shape = (batchsize, in_channels, in_height, in_width)
     filters_shape = (flt_channels, in_channels, flt_height, flt_width)
+    
+    print('signals_shape=',signals_shape)
+    print('filters_shape=',filters_shape)
         
     layer0_input = x.reshape(signals_shape)
 
