@@ -17,6 +17,13 @@ class state:
     COOLDOWN = 3
 
 # global vars
+data_route = '../DeepRepICCV2015/data/YTIO/'
+from os import listdir
+from os.path import isfile, join
+data_list = [ f for f in listdir(data_route) if isfile(join(data_route,f)) ]
+data_list.pop(0)
+print(data_list)
+
 detector_strides = [5,7,9]
 static_th = 10
 norep_std_th = 13
@@ -383,13 +390,20 @@ if __name__ == '__main__':
      
     
     countMap = numpy.zeros([num_of_vids,10])
-    for vidNum in range(1,num_of_vids+1):
+    #for vidNum in range(1,num_of_vids+1):
+    for vidNum in data_list:
 
-        # input video	
-        cap = cv2.VideoCapture('../DeepRepICCV2015/data/YTIO/YTIO_'+str(vidNum)+'.avi')	
-        # output video	
-        video_writer = cv2.VideoWriter('../DeepRepICCV2015/out/YTIO_out'+str(vidNum)+'.avi', cv2.VideoWriter_fourcc(*'XVID'), frame_rate, (640, 480))	
 
+        try:
+            # input video	
+            cap = cv2.VideoCapture( data_route+str(vidNum))	
+            # output video	
+            video_writer = cv2.VideoWriter( data_route + str(vidNum), cv2.VideoWriter_fourcc(*'XVID'), frame_rate, (640, 480))	
+        except BaseException :
+            print("Can't open video", data_route+vidNum)
+            sys.exit(2)
+
+        
         global_counter = 0
         winner_stride = 0
         cur_state = state.NO_REP;
