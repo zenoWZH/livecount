@@ -10,6 +10,7 @@ import cv2
 from scipy.ndimage import filters
 #import theano
 import tensorflow as tf
+from tensorflow.python.framework import graph_util
 import scipy
 #import theano.tensor as T
 import sys, getopt
@@ -136,8 +137,8 @@ class RepDetector:
         # classify    
         #test_set_x.set_value(framesArr, borrow=True)             
         #output_label , pYgivenX  = classify(0)
-        test_set_x = framesArr
-        output_label , pYgivenX  = classify(0)
+        #test_set_x = framesArr
+        output_label , pYgivenX  = classify(0,framesArr)
         self.cur_entropy = - (pYgivenX*numpy.log(pYgivenX)).sum()
         # count
         output_label = output_label[0] + 3  
@@ -327,7 +328,7 @@ if __name__ == '__main__':
     for i in range(5):
         loaded_objects.append(pickle.load(f,encoding='bytes'))
     f.close()
-        
+
     layer0_input = tf.reshape(x,signals_shape)
     
     #print('layer0_input=',tf.shape(layer0_input))
@@ -355,6 +356,7 @@ if __name__ == '__main__':
 
 
     cost = layer4.negative_log_likelihood(y)
+    train_op = tf.train.AdagradOptimizer(0.01).minimize(cost)
     
     outputs = layer4.get_output_labels(y)
 
@@ -373,16 +375,40 @@ if __name__ == '__main__':
     #layer2.__setstate__(loaded_objects[2])
     #layer3.__setstate__(loaded_objects[3])
     #layer4.__setstate__(loaded_objects[4])
-    
+    pb_file_path ='./model/livecount.pb'
+    with tf.Session() as sess :
+        init = tf.global_variables_initializer()
+        sess.run(init)
+        writer = tf.summary.FileWriter("./model/", sess.graph)
+            #saver = tf.train.Saver()
+            #saver.save(sess, MODEL_SAVE_DIR)
+        constant_graph = graph_util.convert_variables_to_constants(sess, sess.graph.as_graph_def(), ["output"])
+        with tf.gfile.FastGFile(pb_file_path, mode='wb') as f:
+            f.write(constant_graph.SerializeToString())
+    sess.close()
 
-    def classify(index):    
+    def classify(index,frames):
+
+        #MODEL_SAVE_DIR ='./model/'    
         with tf.Session() as sess :
             init = tf.global_variables_initializer()
             sess.run(init)
+            #saver = tf.train.Saver()
+            #saver.save(sess, MODEL_SAVE_DIR)
+            print(test_set_x[0].shape)
+            print(test_set_x[index * batch_size: (index + 1) * batch_size].shape)
             classify, __cost = sess.run([outputs,cost],feed_dict={
-                                   x: test_set_x[index * batch_size: (index + 1) * batch_size],
+                                   x: frames[index * batch_size: (index + 1) * batch_size],
                                    y: numpy.zeros((index + 1) * batch_size)})
+            
+            #classify, __cost = sess.run([outputs,cost],feed_dict={
+            #                       x: test_set_x[0],
+            #                       y: numpy.zeros((index + 1) * batch_size)})
+            #constant_graph = graph_util.convert_variables_to_constants(sess, sess.graph.as_graph_def(), ["output"])
+            #with tf.gfile.FastGFile(MODEL_SAVE_DIR, mode='wb') as f:
+            #    f.write(constant_graph.SerializeToString())
         sess.close()
+        
         return classify, __cost
     
     ######################## build done ########################

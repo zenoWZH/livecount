@@ -19,12 +19,14 @@ class LogisticRegression(object):
         else:
             W = tf.Variable(initial_value=W, name='W')
             self.W = W
+            print("weight W loaded in Logistic")
         # initialize the baises b as a vector of n_out 0s
         if b is None:
             self.b = tf.variable(np.zeros((n_out),dtype='float32'),name='b')
         else:
             b = tf.Variable(initial_value=b, name='b')
             self.b = b
+            print("weight b loaded in Logistic")
 
         # compute vector of class-membership probabilities in symbolic form
         self.p_y_given_x = tf.nn.softmax(tf.matmul(tf.transpose(self.W), inputs[:,tf.newaxis]) + self.b)
@@ -35,7 +37,7 @@ class LogisticRegression(object):
         # compute prediction as class whose probability is maximal in
         # symbolic form
         #axis = 1
-        self.y_pred = tf.arg_max(self.p_y_given_x, dimension=1)  
+        self.y_pred = tf.arg_max(self.p_y_given_x, dimension=1, name = "output")  
        # parameters of the model
         self.params = [self.W, self.b]
 
@@ -89,6 +91,7 @@ class HiddenLayer(object):
         else:
             W = tf.Variable(initial_value=W, name='W')
             self.W = W
+            print("weight W loaded in Dense")
             
         if b is None:
             b_values = np.zeros((n_out,), dtype='float32')
@@ -98,6 +101,7 @@ class HiddenLayer(object):
         else:
             b = tf.Variable(initial_value=b, name='b')
             self.b = b
+            print("weight b loaded in Dense")
         
         
 
@@ -146,7 +150,7 @@ class LeNetConvPoolLayer(object):
                                                                           size=filter_shape),dtype='float32')), perm=[2,3,1,0])
         else:
             self.W = tf.transpose(tf.Variable(initial_value=W),perm=[2,3,1,0])
-            print('W done')
+            print("weight W loaded in Conv")
         # the bias is a 1D tensor -- one bias per output feature map
         if b is None:
             b_values = np.zeros((filter_shape[0],), dtype='float32')
@@ -155,7 +159,7 @@ class LeNetConvPoolLayer(object):
             #.dimshuffle('x', 0, 'x', 'x')
             b_new = b[np.newaxis,:,np.newaxis,np.newaxis]
             self.b = tf.Variable(initial_value=b_new)
-            print('b done')
+            print("weight b loaded in Logistic")
 
         # convolve inputs feature maps with filters   ********
         conv_out = tf.nn.conv2d(self.inputs, self.W, strides=(1,1,1,1), padding="VALID")
