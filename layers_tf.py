@@ -27,9 +27,9 @@ class LogisticRegression(object):
             b = tf.Variable(initial_value=b, name='b')
             self.b = b
             print("weight b loaded in Logistic")
-
+        print(self.b.shape)
         # compute vector of class-membership probabilities in symbolic form
-        self.p_y_given_x = tf.nn.softmax(tf.matmul(tf.transpose(self.W), inputs[:,tf.newaxis]) + self.b)
+        self.p_y_given_x = tf.nn.softmax(tf.matmul(tf.transpose(inputs[:,tf.newaxis]),self.W) + self.b)
 
         self.p_y_given_x_printed = tf.Print(input_= self.p_y_given_x, data = [self.p_y_given_x], message = 'p_y_given_x = ')
         #self.p_y_given_x_printed = self.p_y_given_x
@@ -68,7 +68,7 @@ class LogisticRegression(object):
 
     def get_output_labels(self, y):
         #return (((self.y_pred-y)*0 + self.y_pred), self.p_y_given_x)
-        return self.y_pred
+        return (self.y_pred, self.p_y_given_x)
 
 
 
@@ -132,7 +132,7 @@ class LeNetConvPoolLayer(object):
         #data_format= "NCHW"
         assert image_shape[1] == filter_shape[1]
         
-        self.inputs = tf.transpose(inputs, perm=[0,2,3,1])
+        self.inputs = tf.transpose(inputs, perm=[0,3,2,1])
         #print('standard_input_shape=',tf.shape(self.inputs))
         # there are "num inputs feature maps * filter height * filter width"
         # inputss to each hidden unit
@@ -147,9 +147,9 @@ class LeNetConvPoolLayer(object):
             W_bound = np.sqrt(6. / (fan_in + fan_out))
                                                 
             self.W = tf.transponse(tf.Variable(np.asarray(rng.uniform(low=-W_bound, high=W_bound, 
-                                                                          size=filter_shape),dtype='float32')), perm=[2,3,1,0])
+                                                                          size=filter_shape),dtype='float32')), perm=[3,2,1,0])
         else:
-            self.W = tf.transpose(tf.Variable(initial_value=W),perm=[2,3,1,0])
+            self.W = tf.transpose(tf.Variable(initial_value=W),perm=[3,2,1,0])
             print("weight W loaded in Conv")
         # the bias is a 1D tensor -- one bias per output feature map
         if b is None:
@@ -167,7 +167,7 @@ class LeNetConvPoolLayer(object):
         # downsample each feature map individually, using maxpooling   *******
         pooled_out = tf.nn.max_pool(conv_out, ksize=[1,2,2,1], strides=[1,2,2,1], padding='VALID')
 
-        self.output = tf.maximum(0.0, tf.transpose(pooled_out, perm=[0,3,1,2]) + self.b)
+        self.output = tf.maximum(0.0, tf.transpose(pooled_out, perm=[0,3,2,1]) + self.b)
                 
         # store parameters of this layer
         self.params = [self.W, self.b]

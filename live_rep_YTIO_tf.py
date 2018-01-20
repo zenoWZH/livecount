@@ -134,6 +134,7 @@ class RepDetector:
         #output_label , pYgivenX  = classify(0)
         #test_set_x = framesArr
         output_label , pYgivenX  = classify(0,framesArr)
+        print(output_label,pYgivenX)
         self.cur_entropy = - (pYgivenX*numpy.log(pYgivenX)).sum()
         # count
         output_label = output_label[0] + 3  
@@ -142,7 +143,7 @@ class RepDetector:
         #take median of the last frames
         med_out_label = numpy.ceil(numpy.median(self.label_array[history_num-4:history_num]))    
         med_out_label = med_out_label.astype('int32')
-        print(output_label)
+        #print(output_label)
         if initial:
             self.rep_count = 20 / (med_out_label)
             self.frame_residue = 20 % (med_out_label)     
@@ -365,7 +366,7 @@ if __name__ == '__main__':
 
     cost = layer4.negative_log_likelihood(y)
     
-    outputs = layer4.get_output_labels(y)
+    label, outputs = layer4.get_output_labels(y)
 
     #classify = theano.function([index], outputs=layer4.get_output_labels(y),
     #                           givens={
@@ -393,7 +394,7 @@ if __name__ == '__main__':
             #saver.save(sess, MODEL_SAVE_DIR)
             #print(test_set_x[0].shape)
             #print(test_set_x[index * batch_size: (index + 1) * batch_size].shape)
-            shape_in, classify, __cost = sess.run([input_shape,outputs,cost],feed_dict={
+            shape_in, lab , classify, __cost = sess.run([input_shape,label,outputs,cost],feed_dict={
                                    x: frames[index * batch_size: (index + 1) * batch_size],
                                    y: numpy.zeros((index + 1) * batch_size)})
             print(shape_in)
@@ -405,7 +406,7 @@ if __name__ == '__main__':
             #    f.write(constant_graph.SerializeToString())
         sess.close()
         
-        return classify, __cost
+        return lab, classify
     ######################## build done ###########################
      
     
