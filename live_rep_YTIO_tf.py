@@ -9,7 +9,16 @@ import scipy
 #import theano.tensor as T
 from layers_tf import LogisticRegression, HiddenLayer, LeNetConvPoolLayer
 
-global test_set_x, test_set_y, shared_test_set_y
+global test_set_x, test_set_y, shared_test_set_y, data_list
+
+# global vars
+data_route = '../DeepRepICCV2015/data/YTIO/'
+output_route = '../DeepRepICCV2015/out/YTIO/'
+from os import listdir
+from os.path import isfile, join
+data_list = [ f for f in listdir(data_route) if isfile(join(data_route,f)) ]
+data_list.pop(0)
+print(data_list)
 
 class state:
     NO_REP = 1
@@ -89,7 +98,7 @@ class RepDetector:
             ll = si.shape[0]
             th1 = round(ll*0.02)
             th2 = int(round(numpy.floor(ll*0.98)))
-            print(th2)
+            #print(th2)
             y1 = si[th1]
             y2 = si[th2]
             x1 = sj[th1]
@@ -123,8 +132,9 @@ class RepDetector:
         # classify    
         #test_set_x.set_value(framesArr, borrow=True)             
         #output_label , pYgivenX  = classify(0)
-        test_set_x = framesArr
-        output_label , pYgivenX  = classify(0)
+        #test_set_x = framesArr
+        output_label , pYgivenX  = classify(0,framesArr)
+        print(output_label,pYgivenX)
         self.cur_entropy = - (pYgivenX*numpy.log(pYgivenX)).sum()
         # count
         output_label = output_label[0] + 3  
@@ -133,7 +143,7 @@ class RepDetector:
         #take median of the last frames
         med_out_label = numpy.ceil(numpy.median(self.label_array[history_num-4:history_num]))    
         med_out_label = med_out_label.astype('int32')
-
+        #print(output_label)
         if initial:
             self.rep_count = 20 / (med_out_label)
             self.frame_residue = 20 % (med_out_label)     
@@ -142,6 +152,7 @@ class RepDetector:
             if (self.frame_residue >= med_out_label):
                 self.rep_count += 1;
                 self.frame_residue = 0;
+
 
 
     
@@ -280,12 +291,12 @@ if __name__ == '__main__':
     # image size
     layer0_w = 50
     layer0_h = 50
-    layer1_w = (layer0_w-4)/2
-    layer1_h = (layer0_h-4)/2
-    layer2_w = (layer1_w-2)/2
-    layer2_h = (layer1_h-2)/2
-    layer3_w = (layer2_w-2)/2
-    layer3_h = (layer2_h-2)/2
+    layer1_w = (layer0_w-4)//2
+    layer1_h = (layer0_h-4)//2
+    layer2_w = (layer1_w-2)//2
+    layer2_h = (layer1_h-2)//2
+    layer3_w = (layer2_w-2)//2
+    layer3_h = (layer2_h-2)//2
 
     
     ######################
@@ -321,10 +332,11 @@ if __name__ == '__main__':
     f = open('weights.save', 'rb')
     loaded_objects = []
     for i in range(5):
-        loaded_objects.append(pickle.load(f,encoding='bytes'))
+        loaded_objects.append(pickle.load(f,encoding='latin1'))
     f.close()
         
     layer0_input = tf.reshape(x,signals_shape)
+    input_shape = tf.shape(layer0_input)
     
     #print('layer0_input=',tf.shape(layer0_input))
     print('layer0')
@@ -332,11 +344,13 @@ if __name__ == '__main__':
                 image_shape=signals_shape,
                     filter_shape=filters_shape,W=loaded_objects[0][0],b=loaded_objects[0][1], poolsize=(2, 2))
     print('layer1')
+    print((batch_size, flt_channels, layer1_w, layer1_h))
     layer1 = LeNetConvPoolLayer(rng, inputs=layer0.output,
             image_shape=(batch_size, flt_channels, layer1_w, layer1_h),
             filter_shape=(60, flt_channels, 3, 3),W=loaded_objects[1][0],b=loaded_objects[1][1], poolsize=(2, 2))
 
     print('layer2')
+    print((batch_size, 60, layer2_w, layer2_h))
     layer2 = LeNetConvPoolLayer(rng, inputs=layer1.output,
                 image_shape=(batch_size, 60, layer2_w, layer2_h),
                 filter_shape=(90, 60, 3, 3),W=loaded_objects[2][0],b=loaded_objects[2][1], poolsize=(2, 2))
@@ -352,7 +366,7 @@ if __name__ == '__main__':
 
     cost = layer4.negative_log_likelihood(y)
     
-    outputs = layer4.get_output_labels(y)
+    label, outputs = layer4.get_output_labels(y)
 
     #classify = theano.function([index], outputs=layer4.get_output_labels(y),
     #                           givens={
@@ -370,15 +384,29 @@ if __name__ == '__main__':
     #layer3.__setstate__(loaded_objects[3])
     #layer4.__setstate__(loaded_objects[4])
                 
-    def classify(index):    
+    def classify(index,frames):
+
+        #MODEL_SAVE_DIR ='./model/'    
         with tf.Session() as sess :
             init = tf.global_variables_initializer()
             sess.run(init)
-            classify, __cost = sess.run([outputs,cost],feed_dict={
-                                   x: test_set_x[index * batch_size: (index + 1) * batch_size],
+            #saver = tf.train.Saver()
+            #saver.save(sess, MODEL_SAVE_DIR)
+            #print(test_set_x[0].shape)
+            #print(test_set_x[index * batch_size: (index + 1) * batch_size].shape)
+            shape_in, lab , classify, __cost = sess.run([input_shape,label,outputs,cost],feed_dict={
+                                   x: frames[index * batch_size: (index + 1) * batch_size],
                                    y: numpy.zeros((index + 1) * batch_size)})
+            print(shape_in)
+            #classify, __cost = sess.run([outputs,cost],feed_dict={
+            #                       x: test_set_x[0],
+            #                       y: numpy.zeros((index + 1) * batch_size)})
+            #constant_graph = graph_util.convert_variables_to_constants(sess, sess.graph.as_graph_def(), ["output"])
+            #with tf.gfile.FastGFile(MODEL_SAVE_DIR, mode='wb') as f:
+            #    f.write(constant_graph.SerializeToString())
         sess.close()
-        return classify, __cost
+        
+        return lab, classify
     ######################## build done ###########################
      
     
@@ -386,9 +414,20 @@ if __name__ == '__main__':
     for vidNum in range(1,num_of_vids+1):
 
         # input video	
-        cap = cv2.VideoCapture('../DeepRepICCV2015/data/YTIO/YTIO_'+str(vidNum)+'.avi')	
+        #cap = cv2.VideoCapture('../DeepRepICCV2015/data/YTIO/YTIO_'+str(vidNum)+'.avi')
+        #cap = cv2.VideoCapture('../DeepRepICCV2015/data/YT_seg/YTIO_seg_'+str(vidNum)+'.avi')	
         # output video	
-        video_writer = cv2.VideoWriter('../DeepRepICCV2015/out/YTIO_out'+str(vidNum)+'.avi', cv2.VideoWriter_fourcc(*'XVID'), frame_rate, (640, 480))	
+        #video_writer = cv2.VideoWriter('../DeepRepICCV2015/out/YTIO_out'+str(vidNum)+'.avi', cv2.VideoWriter_fourcc(*'XVID'), frame_rate, (640, 480))	
+        #video_writer = cv2.VideoWriter('../DeepRepICCV2015/out/YT_seg_out'+str(vidNum)+'.avi', cv2.VideoWriter_fourcc(*'XVID'), frame_rate, (640, 480))   
+
+        try:
+            # input video   
+            cap = cv2.VideoCapture( data_route+data_list[vidNum]) 
+            # output video  
+            video_writer = cv2.VideoWriter( output_route + data_list[vidNum], cv2.VideoWriter_fourcc(*'XVID'), frame_rate, (640, 480))  
+        except BaseException :
+            print("Can't open video", data_route+vidNum)
+            sys.exit(2)
 
         global_counter = 0
         winner_stride = 0
